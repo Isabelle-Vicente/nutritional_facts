@@ -1,0 +1,14 @@
+# Ambiente virtual e dependências
+venv/
+node_modules/
+.env
+
+# Dados brutos grandes (se não quiser versionar CSVs gigantes)
+data/raw/
+*.csv
+
+# Arquivos do Docker e Banco de dados locais
+.DS_Store
+*.sqlite
+*.db
+pgdata/
