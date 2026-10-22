@@ -16,7 +16,7 @@ O projeto foi construído utilizando a **Arquitetura Medallion** em um ambiente 
 O pipeline é organizado em três camadas de maturidade de dados:
 
  ┌─────────────────┐            ┌─────────────────┐                ┌─────────────────┐       
- │  Bronze (Raw)   │  ────────> │ Silver (Cleaned)│  ──────────>   │   Gold (DW)     │  
+ │  Bronze (Raw)   │        ──> │ Silver (Cleaned)│  ──────────>   │   Gold (DW)     │  
  └─────────────────┘            └─────────────────┘                └─────────────────┘       
  • Ingestão bruta do CSV        • Padronização em snake_case           • Modelo Dimensional (DW)
   • Fidelidade 100% à fonte       • Limpeza com Regex & Casts            • Tabela Fato (fato_nutricao)
@@ -55,30 +55,7 @@ O pipeline é organizado em três camadas de maturidade de dados:
 
 ## 🗄️ Estrutura do Data Warehouse (Star Schema)
 
-   ┌────────────────────────┐
-   │   gold.dim_categoria   │
-   ├────────────────────────┤
-   │ PK  id_categoria       │
-   │     categoria_nome     │
-   └───────────┬────────────┘
-               │ 1
-               │
-               │ N
-   ┌───────────┴────────────┐          ┌──────────────────────┐
-   │   gold.fato_nutricao   │          │  gold.dim_alimento   │
-   ├────────────────────────┤          ├──────────────────────┤
-   │ PK  id_fato            │ N      1 │ PK  id_alimento      │
-   │ FK  id_alimento        ├──────────┤     alimento         │
-   │ FK  id_categoria       │          │     medida           │
-   │     peso_g             │          │     categoria_origem │
-   │     calorias_kcal      │          └──────────────────────┘
-   │     proteina_g         │
-   │     gordura_total_g    │
-   │     gordura_saturada_g │
-   │     fibra_g            │
-   │     carboidratos_g     │
-   │     _ingested_at       │
-   └────────────────────────┘
+![Descrição da imagem](./.github/star_schema.png)
 
 ## 🚀 Como Executar o Projeto
 
@@ -89,7 +66,7 @@ O pipeline é organizado em três camadas de maturidade de dados:
 
 ### 1. Clonar o repositório
 ```bash
-  git clone [https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git](https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git)
+  git clone https://github.com/Isabelle-Vicente/nutritional_facts.git
   cd SEU_REPOSITORIO
 ```
 ### 2. Subir o ambiente PostgreSQL com Docker
@@ -108,26 +85,24 @@ O pipeline é organizado em três camadas de maturidade de dados:
 ```bash
   python ingest_bronze.py
 ```
-4. Executar as Transformações SQL (Silver e Gold)
-Conecte seu cliente SQL (ex: DBeaver) ao banco PostgreSQL rodando em localhost:5432.
+### 4. Executar as Transformações SQL (Silver e Gold)
+- Conecte seu cliente SQL (ex: DBeaver) ao banco PostgreSQL rodando em localhost:5432.
+- Execute os scripts SQL localizados na pasta sql/:
+- Execute 01_silver_cleaned.sql para tratar e materializar a camada Silver.
+- Execute 02_gold_star_schema.sql para criar o schema gold, as dimensões e a tabela fato.
 
-Execute os scripts SQL localizados na pasta sql/:
-
-Execute 01_silver_cleaned.sql para tratar e materializar a camada Silver.
-
-Execute 02_gold_star_schema.sql para criar o schema gold, as dimensões e a tabela fato.
-
-📊 Consulta Exemplo (Camada Gold)
+### 📊 Consulta Exemplo (Camada Gold)
 Após a execução completa do pipeline, você pode rodar análises agregadas diretamente na camada Gold:
 
-SQL
-SELECT 
-    c.categoria_nome,
-    COUNT(DISTINCT f.id_alimento) AS total_alimentos,
-    ROUND(AVG(f.calorias_kcal), 2) AS media_calorias,
-    ROUND(AVG(f.proteina_g), 2) AS media_proteina_g
-FROM gold.fato_nutricao f
-JOIN gold.dim_alimento a ON f.id_alimento = a.id_alimento
-JOIN gold.dim_categoria c ON f.id_categoria = c.id_categoria
-GROUP BY c.categoria_nome
-ORDER BY media_proteina_g DESC;
+```bash
+  SELECT 
+      c.categoria_nome,
+      COUNT(DISTINCT f.id_alimento) AS total_alimentos,
+      ROUND(AVG(f.calorias_kcal), 2) AS media_calorias,
+      ROUND(AVG(f.proteina_g), 2) AS media_proteina_g
+  FROM gold.fato_nutricao f
+  JOIN gold.dim_alimento a ON f.id_alimento = a.id_alimento
+  JOIN gold.dim_categoria c ON f.id_categoria = c.id_categoria
+  GROUP BY c.categoria_nome
+  ORDER BY media_proteina_g DESC;
+```
